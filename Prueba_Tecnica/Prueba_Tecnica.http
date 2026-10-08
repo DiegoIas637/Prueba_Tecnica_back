@@ -1,0 +1,91 @@
+@host = http://localhost:5162
+
+### R1 - Consultar planes (no requiere asesor)
+GET {{host}}/api/plans
+Accept: application/json
+
+### R2 - Registrar venta como asesor A
+POST {{host}}/api/sales
+Content-Type: application/json
+X-Advisor-Id: A
+
+{
+  "planCode": "ACC_ESENCIAL",
+  "buyerName": "Juan Perez",
+  "buyerEmail": "juan@ejemplo.test",
+  "requestReference": "REF-A-0001"
+}
+
+### R3 - Reenvío idéntico (mismo asesor, misma referencia) -> devuelve la MISMA venta, sin consumir cupo
+POST {{host}}/api/sales
+Content-Type: application/json
+X-Advisor-Id: A
+
+{
+  "planCode": "ACC_ESENCIAL",
+  "buyerName": "Juan Perez",
+  "buyerEmail": "juan@ejemplo.test",
+  "requestReference": "REF-A-0001"
+}
+
+### R3 - Misma referencia con datos distintos -> 409 REFERENCE_CONFLICT (se conserva la original)
+POST {{host}}/api/sales
+Content-Type: application/json
+X-Advisor-Id: A
+
+{
+  "planCode": "ACC_PLUS",
+  "buyerName": "Pedro Gomez",
+  "buyerEmail": "pedro@ejemplo.test",
+  "requestReference": "REF-A-0001"
+}
+
+### R3 - Asesor B compra el mismo plan (referencia propia). Si Esencial ya no tiene cupo -> 409 NO_QUOTA_AVAILABLE
+POST {{host}}/api/sales
+Content-Type: application/json
+X-Advisor-Id: B
+
+{
+  "planCode": "ACC_ESENCIAL",
+  "buyerName": "Ana Lopez",
+  "buyerEmail": "ana@ejemplo.test",
+  "requestReference": "REF-B-0001"
+}
+
+### R2 - Registrar venta plan Plus como asesor B
+POST {{host}}/api/sales
+Content-Type: application/json
+X-Advisor-Id: B
+
+{
+  "planCode": "ACC_PLUS",
+  "buyerName": "Ana Lopez",
+  "buyerEmail": "ana@ejemplo.test",
+  "requestReference": "REF-B-0002"
+}
+
+### R4 - Consultar ventas propias del asesor A (paginado, 20 por página)
+GET {{host}}/api/sales?page=1&pageSize=20
+Accept: application/json
+X-Advisor-Id: A
+
+### R4 - Consultar ventas propias del asesor B
+GET {{host}}/api/sales?page=1&pageSize=20
+Accept: application/json
+X-Advisor-Id: B
+
+### Error - Sin header de asesor -> 401 UNAUTHORIZED_ADVISOR
+GET {{host}}/api/sales
+Accept: application/json
+
+### Error - Datos inválidos (email) -> 400 INVALID_SALE_DATA
+POST {{host}}/api/sales
+Content-Type: application/json
+X-Advisor-Id: A
+
+{
+  "planCode": "ACC_PLUS",
+  "buyerName": "Test",
+  "buyerEmail": "correo-invalido",
+  "requestReference": "REF-A-9999"
+}
